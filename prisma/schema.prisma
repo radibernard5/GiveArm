@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DonationStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum DonationFrequency {
+  one_time
+  monthly
+}
+
+enum PaymentChannel {
+  mobile_money
+  card
+}
+
+enum MomoNetwork {
+  mtn
+  vod
+  atl
+}
+
+enum CauseStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  PENDING_APPROVAL
+  REJECTED
+}
+
+enum PayoutStatus {
+  SCHEDULED
+  PROCESSING
+  COMPLETED
+}
+
+model Cause {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  category    String
+  summary     String      @default("")
+  description String
+  goalAmount  Float
+  raisedAmount Float      @default(0)
+  currency    String      @default("GHS")
+  imageUrl    String
+  beneficiary String      @default("")
+  startDate   DateTime?
+  endDate     DateTime?
+  featured    Boolean     @default(false)
+  status      CauseStatus @default(ACTIVE)
+  submittedBy String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  donations   Donation[]
+  payouts     Payout[]
+}
+
+model Donation {
+  id             String            @id @default(cuid())
+  reference      String            @unique
+  donorName      String
+  donorEmail     String
+  donorPhone     String?
+  amount         Float
+  currency       String            @default("GHS")
+  paymentChannel PaymentChannel
+  momoNetwork    MomoNetwork?
+  frequency      DonationFrequency
+  status         DonationStatus    @default(PENDING)
+  causeId        String?
+  cause          Cause?            @relation(fields: [causeId], references: [id])
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+
+  @@index([causeId])
+  @@index([status])
+}
+
+model Story {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  content     String
+  imageUrl    String
+  publishedAt DateTime @default(now())
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Payout {
+  id          String       @id @default(cuid())
+  causeId     String
+  cause       Cause        @relation(fields: [causeId], references: [id])
+  beneficiary String
+  available   Float
+  fee         Float
+  net         Float
+  status      PayoutStatus @default(SCHEDULED)
+  date        DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  @@index([causeId])
+}
+
+model AdminSetting {
+  id        String   @id @default("default")
+  presets   String   @default("50,100,250,500")
+  taxReceipt Boolean @default(true)
+  featuredStory String @default("")
+  updatedAt DateTime @updatedAt
+}
